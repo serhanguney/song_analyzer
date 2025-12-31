@@ -20,6 +20,15 @@ let accessToken = null;
 // Check for verbose flag
 const VERBOSE = process.argv.includes('-v') || process.argv.includes('--verbose');
 
+// ANSI color codes
+const colors = {
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  cyan: '\x1b[36m',
+  red: '\x1b[31m',
+  reset: '\x1b[0m'
+};
+
 /**
  * Get Spotify access token using Client Credentials flow
  */
@@ -523,14 +532,55 @@ async function extractMetadata(filePath) {
 }
 
 /**
+ * Validate if release date is in YYYY-MM-DD format
+ */
+function isValidReleaseDateFormat(dateString) {
+  if (!dateString) return false;
+  
+  // Check if it matches YYYY-MM-DD format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateString)) {
+    return false;
+  }
+  
+  // Validate it's a real date
+  const [year, month, day] = dateString.split('-');
+  const yearNum = parseInt(year);
+  const monthNum = parseInt(month);
+  const dayNum = parseInt(day);
+  
+  if (yearNum < 1900 || yearNum > new Date().getFullYear() + 1) {
+    return false;
+  }
+  
+  if (monthNum < 1 || monthNum > 12) {
+    return false;
+  }
+  
+  if (dayNum < 1 || dayNum > 31) {
+    return false;
+  }
+  
+  const date = new Date(dateString);
+  return !isNaN(date.getTime());
+}
+
+/**
  * Check which required fields are missing from metadata
  */
 function getMissingRequiredFields(metadata) {
   const missing = [];
   
   for (const fieldName of REQUIRED_FIELD_NAMES) {
-    if (!metadata[fieldName]) {
-      missing.push(fieldName);
+    if (fieldName === 'releaseDate') {
+      // Special handling for releaseDate - check if it exists AND is in valid format
+      if (!metadata[fieldName] || !isValidReleaseDateFormat(metadata[fieldName])) {
+        missing.push(fieldName);
+      }
+    } else {
+      if (!metadata[fieldName]) {
+        missing.push(fieldName);
+      }
     }
   }
   
@@ -563,19 +613,25 @@ async function updateFileMetadata(filePath, spotifyData, trackData, existingMeta
     // node-id3 supports MP3, WAV, and AIFF files
     if (ext === '.mp3' || ext === '.wav' || ext === '.aiff' || ext === '.aif') {
       try {
-        // Prepare tags to write - always update date fields
-        // Note: We store the formatted date in performerInfo (Album Artist) to avoid overwriting the actual album name
-        const tags = {
-          year: releaseDate.formatted.split('/')[0],
-          date: releaseDate.full,
-          performerInfo: releaseDate.formatted,  // Album Artist field (TPE2 frame)
-          releaseTime: releaseDate.full,
-          originalReleaseTime: releaseDate.full,
-          recordingTime: releaseDate.full
-        };
+        // Prepare tags to write
+        const tags = {};
         
         // Fill in missing required fields from Spotify data
         const fieldsFilledIn = [];
+        
+        // Update date fields only if releaseDate is missing or invalid format
+        if (missingFields.includes('releaseDate')) {
+          if (VERBOSE && existingMetadata.releaseDate && !isValidReleaseDateFormat(existingMetadata.releaseDate)) {
+            console.log(`   🔧 Fixing invalid releaseDate: "${colors.red}${existingMetadata.releaseDate}${colors.reset}" → ${colors.green}"${releaseDate.full}"${colors.reset}`);
+          }
+          tags.year = releaseDate.formatted.split('/')[0];
+          tags.date = releaseDate.full;
+          tags.performerInfo = releaseDate.formatted;  // Album Artist field (TPE2 frame)
+          tags.releaseTime = releaseDate.full;
+          tags.originalReleaseTime = releaseDate.full;
+          tags.recordingTime = releaseDate.full;
+          fieldsFilledIn.push('releaseDate');
+        }
         
         // Title - from track data
         if (missingFields.includes('title') && trackData?.name) {
@@ -614,7 +670,7 @@ async function updateFileMetadata(filePath, spotifyData, trackData, existingMeta
           
           if (genres.length > 0) {
             if (VERBOSE) {
-              console.log(`   🎸 Writing genre from ${genreSource}: "${genres.join(', ')}"`);
+              console.log(`   🎸 Writing genre from ${genreSource}: ${colors.green}"${genres.join(', ')}"${colors.reset}`);
             }
             tags.genre = genres.join(', ');
             fieldsFilledIn.push('genre');
@@ -626,7 +682,7 @@ async function updateFileMetadata(filePath, spotifyData, trackData, existingMeta
         // Label - from album data (NodeID3 uses 'publisher' field for record label)
         if (missingFields.includes('label') && spotifyData?.label) {
           if (VERBOSE) {
-            console.log(`   🏷️  Writing label: "${spotifyData.label}"`);
+            console.log(`   🏷️  Writing label: ${colors.green}"${spotifyData.label}"${colors.reset}`);
           }
           tags.publisher = spotifyData.label;  // NodeID3 uses 'publisher' not 'label'
           fieldsFilledIn.push('label');
@@ -683,7 +739,7 @@ async function updateFileMetadata(filePath, spotifyData, trackData, existingMeta
         if (VERBOSE) {
           console.log(`✅ Successfully updated metadata for ${path.basename(filePath)}`);
           if (fieldsFilledIn.length > 0) {
-            console.log(`   📝 Filled missing fields from Spotify: ${fieldsFilledIn.join(', ')}`);
+            console.log(`   📝 Filled missing fields from Spotify: ${colors.green}${fieldsFilledIn.join(', ')}${colors.reset}`);
           }
           
           // Show which fields still need manual entry
@@ -696,7 +752,7 @@ async function updateFileMetadata(filePath, spotifyData, trackData, existingMeta
           );
           
           if (stillMissing.length > 0) {
-            console.log(`   ⚠️  Still missing (Spotify has no data): ${stillMissing.join(', ')}`);
+            console.log(`   ⚠️  Still missing (Spotify has no data): ${colors.yellow}${stillMissing.join(', ')}${colors.reset}`);
             console.log(`   ⚠️  This file will remain in [invalid] until these fields are added manually`);
           }
           
@@ -825,7 +881,8 @@ async function main() {
   const results = {
     matched: [],
     notMatched: [],
-    suspicious: []
+    suspicious: [],
+    skipped: []
   };
   
   console.log('🔍 Searching Spotify for track information...\n');
@@ -844,8 +901,24 @@ async function main() {
     
     // Check for missing required fields
     const missingFields = getMissingRequiredFields(metadata);
-    if (VERBOSE && missingFields.length > 0) {
-      console.log(`   📝 Missing fields: ${missingFields.join(', ')}`);
+    
+    // Skip files that already have all required fields
+    if (missingFields.length === 0) {
+      if (VERBOSE) {
+        console.log(`   ✅ All required fields present - skipping`);
+      }
+      results.skipped.push({
+        fileName: relativePath
+      });
+      continue;
+    }
+    
+    if (VERBOSE) {
+      console.log(`   📝 Missing fields: ${colors.yellow}${missingFields.join(', ')}${colors.reset}`);
+      // Show current release date if it exists but is invalid format
+      if (missingFields.includes('releaseDate') && metadata.releaseDate) {
+        console.log(`   ⚠️  Current releaseDate "${colors.red}${metadata.releaseDate}${colors.reset}" is invalid (must be YYYY-MM-DD)`);
+      }
     }
     
     if (!metadata.artist) {
@@ -885,7 +958,7 @@ async function main() {
             if (trackData.name) spotifyFields.push('title');
             if (trackData.artists?.length > 0) spotifyFields.push('artist');
             if (spotifyFields.length > 0) {
-              console.log(`   📦 Spotify has: ${spotifyFields.join(', ')}`);
+              console.log(`   📦 Spotify has: ${colors.green}${spotifyFields.join(', ')}${colors.reset}`);
             } else {
               console.log(`   ⚠️  Spotify has no additional metadata`);
             }
@@ -913,7 +986,7 @@ async function main() {
             if (spotifyData.label) spotifyFields.push('label');
             if (spotifyData.images?.length > 0) spotifyFields.push('artwork');
             if (spotifyFields.length > 0) {
-              console.log(`   📦 Spotify has: ${spotifyFields.join(', ')}`);
+              console.log(`   📦 Spotify has: ${colors.green}${spotifyFields.join(', ')}${colors.reset}`);
             } else {
               console.log(`   ⚠️  Spotify has no additional metadata (no genre/label/artwork)`);
             }
@@ -969,55 +1042,118 @@ async function main() {
   // Display summary
   console.log('\n' + '='.repeat(60));
   console.log('📊 Summary\n');
-  console.log(`Match found for ${results.matched.length} song(s) ✅`);
+  console.log(`Spotify matches found: ${results.matched.length} song(s) ✅`);
   
   if (results.matched.length > 0) {
     console.log('\nSongs to be updated:\n');
-    results.matched.forEach((item, index) => {
-      console.log(`  ${index + 1}. ${item.fileName}`);
-      console.log(`     Fields to update:`);
+    
+    const updatableFiles = [];
+    const noUpdateFiles = [];
+    
+    // Separate files into those with updatable fields and those without
+    results.matched.forEach((item) => {
+      const updatableFields = [];
       
-      // Release Date - always updated
-      const releaseDate = parseReleaseDate(
-        item.spotifyData.release_date, 
-        item.spotifyData.release_date_precision
-      );
-      if (releaseDate) {
-        console.log(`       • releaseDate: ${releaseDate.formatted} (${releaseDate.full})`);
-      }
-      
-      // Title - if missing and available
-      if (item.missingFields.includes('title') && item.trackData?.name) {
-        console.log(`       • title: "${item.trackData.name}"`);
-      }
-      
-      // Artist - if missing and available
-      if (item.missingFields.includes('artist') && item.trackData?.artists?.length > 0) {
-        const artists = item.trackData.artists.map(a => a.name).join(', ');
-        console.log(`       • artist: "${artists}"`);
-      }
-      
-      // Genre - if missing and available from album or artist
-      if (item.missingFields.includes('genre')) {
-        if (item.spotifyData?.genres?.length > 0) {
-          console.log(`       • genre: "${item.spotifyData.genres.join(', ')}" (from album)`);
-        } else if (item.trackData?.artists?.length > 0) {
-          console.log(`       • genre: (will fetch from artist data)`);
+      // Check Release Date
+      if (item.missingFields.includes('releaseDate')) {
+        const releaseDate = parseReleaseDate(
+          item.spotifyData.release_date, 
+          item.spotifyData.release_date_precision
+        );
+        if (releaseDate) {
+          let releaseDateLabel = 'releaseDate';
+          // Check if we're updating an invalid date vs adding missing date
+          if (item.metadata.releaseDate && !isValidReleaseDateFormat(item.metadata.releaseDate)) {
+            releaseDateLabel = `releaseDate (fixing: ${item.metadata.releaseDate})`;
+          }
+          updatableFields.push({ 
+            type: releaseDateLabel, 
+            value: `${releaseDate.formatted} (${releaseDate.full})` 
+          });
         }
       }
       
-      // Label - if missing and available
-      if (item.missingFields.includes('label') && item.spotifyData?.label) {
-        console.log(`       • label: "${item.spotifyData.label}"`);
+      // Check Title
+      if (item.missingFields.includes('title') && item.trackData?.name) {
+        updatableFields.push({ type: 'title', value: `"${item.trackData.name}"` });
       }
       
-      // Artwork - if missing and available
+      // Check Artist
+      if (item.missingFields.includes('artist') && item.trackData?.artists?.length > 0) {
+        const artists = item.trackData.artists.map(a => a.name).join(', ');
+        updatableFields.push({ type: 'artist', value: `"${artists}"` });
+      }
+      
+      // Check Genre
+      if (item.missingFields.includes('genre')) {
+        if (item.spotifyData?.genres?.length > 0) {
+          updatableFields.push({ 
+            type: 'genre', 
+            value: `"${item.spotifyData.genres.join(', ')}" (from album)` 
+          });
+        } else if (item.trackData?.artists?.length > 0) {
+          updatableFields.push({ type: 'genre', value: '(will fetch from artist data)' });
+        }
+      }
+      
+      // Check Label
+      if (item.missingFields.includes('label') && item.spotifyData?.label) {
+        updatableFields.push({ type: 'label', value: `"${item.spotifyData.label}"` });
+      }
+      
+      // Check Artwork
       if (item.missingFields.includes('artwork') && item.spotifyData?.images?.length > 0) {
         const imgSize = item.spotifyData.images[0];
-        console.log(`       • artwork: ${imgSize.width}x${imgSize.height} image`);
+        updatableFields.push({ type: 'artwork', value: `${imgSize.width}x${imgSize.height} image` });
+      }
+      
+      if (updatableFields.length > 0) {
+        updatableFiles.push({ ...item, updatableFields });
+      } else {
+        noUpdateFiles.push(item);
       }
     });
-    console.log('');
+    
+    // Display files with updatable fields
+    if (updatableFiles.length > 0) {
+      updatableFiles.forEach((item, index) => {
+        console.log(`  ${index + 1}. ${item.fileName}`);
+        console.log(`     Fields to update:`);
+        
+        item.updatableFields.forEach(field => {
+          console.log(`       • ${field.type}: ${colors.green}${field.value}${colors.reset}`);
+        });
+      });
+      console.log('');
+    }
+    
+    // Display files with no updatable fields
+    if (noUpdateFiles.length > 0) {
+      console.log(`${colors.yellow}⚠️  ${noUpdateFiles.length} song(s) matched but Spotify has no data for missing fields:${colors.reset}\n`);
+      noUpdateFiles.forEach(item => {
+        console.log(`  - ${item.fileName}`);
+        
+        // Separate invalid vs missing fields for better clarity
+        const invalidReleaseDate = item.missingFields.includes('releaseDate') && 
+                                    item.metadata.releaseDate && 
+                                    !isValidReleaseDateFormat(item.metadata.releaseDate);
+        
+        if (invalidReleaseDate) {
+          console.log(`    Invalid releaseDate: ${colors.red}"${item.metadata.releaseDate}"${colors.reset} (needs YYYY-MM-DD)`);
+        }
+        
+        const otherMissing = item.missingFields.filter(f => 
+          f !== 'releaseDate' || !item.metadata.releaseDate
+        );
+        
+        if (otherMissing.length > 0) {
+          console.log(`    Missing: ${colors.yellow}${otherMissing.join(', ')}${colors.reset}`);
+        }
+        
+        console.log(`    ${colors.yellow}Spotify has no data for these fields${colors.reset}`);
+      });
+      console.log('');
+    }
   }
   
   if (results.notMatched.length > 0) {
@@ -1027,23 +1163,49 @@ async function main() {
     });
   }
   
+  // Display skipped files (already have all required fields)
+  if (results.skipped.length > 0) {
+    console.log(`\n${colors.cyan}Skipped ${results.skipped.length} song(s) (already have all required fields) ℹ️${colors.reset}`);
+    if (VERBOSE) {
+      console.log('');
+      results.skipped.forEach(item => {
+        console.log(`  - ${item.fileName}`);
+      });
+    }
+  }
+  
   // Display suspicious matches
   if (results.suspicious.length > 0) {
     console.log(`\n⚠️  SUSPICIOUS MATCHES (${results.suspicious.length}) - Please review carefully:\n`);
     results.suspicious.forEach(item => {
       console.log(`  - ${item.fileName}`);
-      console.log(`    Found: "${item.foundAlbum}" by ${item.foundArtist}`);
-      console.log(`    Release Date: ${item.releaseDate}`);
-      console.log(`    Reason: ${item.reason}\n`);
+      console.log(`    Found: ${colors.yellow}"${item.foundAlbum}"${colors.reset} by ${colors.yellow}${item.foundArtist}${colors.reset}`);
+      console.log(`    Release Date: ${colors.yellow}${item.releaseDate}${colors.reset}`);
+      console.log(`    Reason: ${colors.red}${item.reason}${colors.reset}\n`);
     });
     console.log('These matches may be incorrect. Review them before proceeding!');
   }
   
   console.log('='.repeat(60) + '\n');
   
+  // Filter matched results to only include files with updatable fields
+  const updatableMatches = results.matched.filter(item => {
+    // Check if there's at least one field that can be updated
+    const hasReleaseDate = item.missingFields.includes('releaseDate') && 
+                          parseReleaseDate(item.spotifyData.release_date, item.spotifyData.release_date_precision);
+    const hasTitle = item.missingFields.includes('title') && item.trackData?.name;
+    const hasArtist = item.missingFields.includes('artist') && item.trackData?.artists?.length > 0;
+    const hasGenre = item.missingFields.includes('genre') && 
+                     (item.spotifyData?.genres?.length > 0 || item.trackData?.artists?.length > 0);
+    const hasLabel = item.missingFields.includes('label') && item.spotifyData?.label;
+    const hasArtwork = item.missingFields.includes('artwork') && item.spotifyData?.images?.length > 0;
+    
+    return hasReleaseDate || hasTitle || hasArtist || hasGenre || hasLabel || hasArtwork;
+  });
+  
   // Ask user for confirmation
-  if (results.matched.length === 0) {
-    console.log('ℹ️  No songs to update. Exiting.');
+  if (updatableMatches.length === 0) {
+    console.log('ℹ️  No songs to update (Spotify has no data for missing fields). Exiting.');
     process.exit(0);
   }
   
@@ -1060,13 +1222,13 @@ async function main() {
   let successCount = 0;
   let failCount = 0;
   
-  for (let i = 0; i < results.matched.length; i++) {
-    const item = results.matched[i];
+  for (let i = 0; i < updatableMatches.length; i++) {
+    const item = updatableMatches[i];
     
     if (VERBOSE) {
       console.log(`\nUpdating: ${item.fileName}`);
     } else {
-      process.stdout.write(`\rUpdating ${i + 1}/${results.matched.length} files...`);
+      process.stdout.write(`\rUpdating ${i + 1}/${updatableMatches.length} files...`);
     }
     
     const success = await updateFileMetadata(

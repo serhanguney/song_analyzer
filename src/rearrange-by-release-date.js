@@ -8,6 +8,9 @@ import { REQUIRED_FIELD_NAMES, AUDIO_EXTENSIONS } from './common.js';
 const SOURCE_DIRECTORY = process.env.SOURCE_DIRECTORY;
 const TARGET_DIRECTORY = process.env.TARGET_DIRECTORY;
 
+// Check for verbose flag
+const VERBOSE = process.argv.includes('-v') || process.argv.includes('--verbose');
+
 /**
  * Get all audio files from directory recursively
  */
@@ -69,17 +72,43 @@ async function extractAndValidateMetadata(filePath) {
       fileName: path.basename(filePath)
     };
     
+    // Debug logging for release date fields (verbose mode)
+    if (VERBOSE) {
+      console.log(`\n🔍 Debug metadata for ${path.basename(filePath)}:`);
+      console.log(`  originalReleaseTime: ${common.originalReleaseTime || 'N/A'}`);
+      console.log(`  releaseTime: ${common.releasedate || 'N/A'}`);
+      console.log(`  originaldate: ${common.originaldate || 'N/A'}`);
+      console.log(`  date: ${common.date || 'N/A'}`);
+      console.log(`  year: ${common.year || 'N/A'}`);
+    }
+    
     // Try to extract release date from various possible fields
-    // Priority: originalReleaseTime > releaseTime > date > year
-    if (common.originaldate) {
-      fileMetadata.releaseDate = parseReleaseDate(common.originaldate);
-      fileMetadata.releaseDateRaw = common.originaldate;
+    // Priority: originalReleaseTime > releaseTime > originaldate > date > year
+    let releaseDateValue = null;
+    
+    // Check multiple possible release date fields
+    if (common.releasedate) {
+      releaseDateValue = common.releasedate;
+    } else if (common.originalReleaseTime) {
+      releaseDateValue = common.originalReleaseTime;
+    } else if (common.originaldate) {
+      releaseDateValue = common.originaldate;
     } else if (common.date) {
-      fileMetadata.releaseDate = parseReleaseDate(common.date);
-      fileMetadata.releaseDateRaw = common.date;
+      releaseDateValue = common.date;
     } else if (common.year) {
-      fileMetadata.releaseDate = parseReleaseDate(common.year.toString());
-      fileMetadata.releaseDateRaw = common.year.toString();
+      releaseDateValue = common.year.toString();
+    }
+    
+    if (releaseDateValue) {
+      fileMetadata.releaseDate = parseReleaseDate(releaseDateValue);
+      fileMetadata.releaseDateRaw = releaseDateValue;
+      
+      if (VERBOSE) {
+        console.log(`  ✅ Selected release date: ${releaseDateValue}`);
+        console.log(`  Parsed: ${fileMetadata.releaseDate ? fileMetadata.releaseDate.formatted : 'INVALID'}`);
+      }
+    } else if (VERBOSE) {
+      console.log(`  ⚠️  No release date field found`);
     }
     
     return fileMetadata;
@@ -295,6 +324,12 @@ async function cleanupEmptyDirectories(directory, isSource = false) {
  */
 async function main() {
   console.log('📂 Audio File Organizer by Release Date\n');
+  
+  if (!VERBOSE) {
+    console.log('💡 Tip: Use -v or --verbose flag for detailed debug information\n');
+  } else {
+    console.log('🔍 Running in verbose mode\n');
+  }
   
   // Validate configuration
   if (!SOURCE_DIRECTORY) {

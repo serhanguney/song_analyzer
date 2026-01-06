@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "organize": "node src/rearrange-by-release-date.js",
     "find-references": "node src/find-references.js",
+    "update-tag": "node src/update-tag.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

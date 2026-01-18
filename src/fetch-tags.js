@@ -1121,7 +1121,7 @@ async function main() {
         console.log(`     Fields to update:`);
         
         item.updatableFields.forEach(field => {
-          console.log(`       • ${field.type}: ${colors.green}${field.value}${colors.reset}`);
+          console.log(`       • ${colors.yellow}${field.type}: ${colors.green}${field.value}${colors.reset}`);
         });
       });
       console.log('');

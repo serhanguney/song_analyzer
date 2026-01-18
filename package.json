@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "fetch-tags": "node src/index.js",
+    "fetch-tags": "node src/fetch-tags.js",
     "organize": "node src/rearrange-by-release-date.js",
     "find-references": "node src/find-references.js",
     "update-tag": "node src/update-tag.js"

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "fetch-tags": "tsx src/fetch-tags/index.ts",
-    "organize": "node src/rearrange-by-release-date.js",
+    "organize": "tsx src/organize/index.ts",
     "find-references": "node src/find-references.js",
     "update-tag": "node src/update-tag.js",
     "auth": "tsx src/spotify-auth.ts",
@@ -27,7 +27,8 @@
     "music-metadata": "^11.10.3",
     "node-id3": "^0.2.9",
     "open": "^11.0.0",
-    "readline-sync": "^1.4.10"
+    "readline-sync": "^1.4.10",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

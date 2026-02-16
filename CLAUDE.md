@@ -46,6 +46,10 @@ All scripts live in `src/` and run independently via npm scripts. There is no sh
 
 Read metadata: MP3, WAV, AIFF, M4A, FLAC (via music-metadata). Write metadata: MP3, WAV, AIFF only (via node-id3). M4A and FLAC are read-only.
 
+### TypeScript conventions
+
+- Refrain from type casting when writing scripts with TypeScript. Instead refer to validation by using zod or alternative methods.
+
 ### Key patterns
 
 - Release dates must be strictly YYYY-MM-DD format

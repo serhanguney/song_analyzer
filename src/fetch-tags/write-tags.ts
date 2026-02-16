@@ -1,7 +1,7 @@
 import path from 'node:path';
 import axios from 'axios';
 import NodeID3 from 'node-id3';
-import { getSpotifyArtist } from '../spotify.js';
+import { getSpotifyArtist } from '../spotify/index.ts';
 import { isValidReleaseDateFormat } from './scan.ts';
 import type {
   ParsedReleaseDate,
@@ -46,7 +46,7 @@ export async function resolveGenres(
   if (trackData?.artists && trackData.artists.length > 0) {
     try {
       const artistData = await getSpotifyArtist(accessToken, trackData.artists[0].id);
-      if (artistData?.genres?.length > 0) {
+      if (artistData && artistData.genres && artistData.genres.length > 0) {
         return { genres: artistData.genres, source: 'artist' };
       }
     } catch {

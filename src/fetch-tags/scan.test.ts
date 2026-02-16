@@ -39,6 +39,8 @@ describe('getMissingRequiredFields', () => {
     artwork: true,
     label: 'Label',
     genre: 'House',
+    bpm: null,
+    fileName: 'test.mp3',
   };
 
   it('returns empty array when all fields present', () => {
@@ -46,8 +48,7 @@ describe('getMissingRequiredFields', () => {
   });
 
   it('detects missing fields', () => {
-    const { genre, label, ...rest } = complete;
-    expect(getMissingRequiredFields(rest)).toEqual(['label', 'genre']);
+    expect(getMissingRequiredFields({ ...complete, genre: null, label: null })).toEqual(['label', 'genre']);
   });
 
   it('detects null fields as missing', () => {

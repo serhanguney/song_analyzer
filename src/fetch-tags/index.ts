@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import readlineSync from 'readline-sync';
-import { getClientCredentialsToken } from '../spotify.js';
+import { getClientCredentialsToken } from '../spotify/index.ts';
 import { scanDirectory } from './scan.ts';
 import { matchToSpotify } from './match.ts';
 import { filterUpdatableMatches, displaySummary } from './summary.ts';

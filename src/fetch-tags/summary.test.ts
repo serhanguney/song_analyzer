@@ -7,6 +7,7 @@ function makeMatch(overrides: Partial<MatchedFile> = {}): MatchedFile {
     filePath: '/music/test.mp3',
     fileName: 'test.mp3',
     spotifyData: {
+      id: 'album1',
       name: 'Album',
       release_date: '2023-05-15',
       release_date_precision: 'day',
@@ -67,6 +68,7 @@ describe('computeUpdatableFields', () => {
     const match = makeMatch({
       missingFields: ['genre', 'label'],
       spotifyData: {
+        id: 'album1',
         name: 'Album',
         release_date: '2023-05-15',
         release_date_precision: 'day',
@@ -88,6 +90,7 @@ describe('filterUpdatableMatches', () => {
     const noDataMatch = makeMatch({
       missingFields: ['genre'],
       spotifyData: {
+        id: 'album1',
         name: 'Album',
         release_date: '2023-05-15',
         release_date_precision: 'day',

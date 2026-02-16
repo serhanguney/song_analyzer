@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { addTracksToPlaylist, matchFiles, getPlaylistTracks, filterDuplicates } from './add-to-playlist.ts';
 
-// Mock spotify.js — use real implementations for validation functions
-import { validateArtistMatch as realValidateArtistMatch, stringSimilarity as realStringSimilarity } from './spotify.js';
-vi.mock('./spotify.js', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('./spotify.js')>();
+// Mock spotify module — use real implementations for validation functions
+import { validateArtistMatch as realValidateArtistMatch, stringSimilarity as realStringSimilarity } from './spotify/index.ts';
+vi.mock('./spotify/index.ts', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('./spotify/index.ts')>();
   return {
     searchSpotifyTrack: vi.fn(),
     searchSpotifyAlbum: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('./spotify-auth.ts', () => ({
 // Mock dotenv
 vi.mock('dotenv/config', () => ({}));
 
-import { searchSpotifyTrack, searchSpotifyAlbum, getSpotifyAlbum, extractMetadata } from './spotify.js';
+import { searchSpotifyTrack, searchSpotifyAlbum, getSpotifyAlbum, extractMetadata } from './spotify/index.ts';
 
 const mockSearchTrack = vi.mocked(searchSpotifyTrack);
 const mockSearchAlbum = vi.mocked(searchSpotifyAlbum);
@@ -116,7 +116,8 @@ describe('matchFiles', () => {
     mockSearchTrack.mockResolvedValue({
       uri: 'spotify:track:abc123',
       name: 'Blue Monday',
-      artists: [{ name: 'New Order' }],
+      artists: [{ id: '1', name: 'New Order' }],
+      album: { id: 'alb1' },
     });
 
     const result = await matchFiles('token', ['/music/blue-monday.mp3'], '/music');
@@ -145,12 +146,31 @@ describe('matchFiles', () => {
     });
 
     mockSearchTrack.mockResolvedValue(null);
-    mockSearchAlbum.mockResolvedValue({ id: 'album123' });
+    mockSearchAlbum.mockResolvedValue({
+      data: {
+        id: 'album123',
+        name: 'xx',
+        release_date: '2009-08-17',
+        release_date_precision: 'day',
+        artists: [{ id: '2', name: 'The xx' }],
+        genres: [],
+        label: '',
+        images: [],
+      },
+    });
     mockGetAlbum.mockResolvedValue({
+      id: 'album123',
+      name: 'xx',
+      release_date: '2009-08-17',
+      release_date_precision: 'day',
+      artists: [{ id: '2', name: 'The xx' }],
+      genres: [],
+      label: '',
+      images: [],
       tracks: {
         items: [
-          { uri: 'spotify:track:xyz', name: 'Intro', artists: [{ name: 'The xx' }] },
-          { uri: 'spotify:track:other', name: 'VCR', artists: [{ name: 'The xx' }] },
+          { uri: 'spotify:track:xyz', name: 'Intro', artists: [{ id: '2', name: 'The xx' }], album: { id: 'album123' } },
+          { uri: 'spotify:track:other', name: 'VCR', artists: [{ id: '2', name: 'The xx' }], album: { id: 'album123' } },
         ],
       },
     });
@@ -226,7 +246,7 @@ describe('matchFiles', () => {
 
     mockSearchTrack
       .mockResolvedValueOnce({
-        uri: 'spotify:track:a', name: 'Track A', artists: [{ name: 'Artist A' }],
+        uri: 'spotify:track:a', name: 'Track A', artists: [{ id: '1', name: 'Artist A' }], album: { id: 'alb1' },
       })
       .mockResolvedValueOnce(null);
 
@@ -252,7 +272,8 @@ describe('matchFiles', () => {
     mockSearchTrack.mockResolvedValue({
       uri: 'spotify:track:wrong',
       name: 'Daydreams',
-      artists: [{ name: 'Jordan Plant' }, { name: 'Mac White' }],
+      artists: [{ id: '3', name: 'Jordan Plant' }, { id: '4', name: 'Mac White' }],
+      album: { id: 'alb2' },
     });
 
     const result = await matchFiles('token', ['/music/daydream.mp3'], '/music');
@@ -272,7 +293,8 @@ describe('matchFiles', () => {
     mockSearchTrack.mockResolvedValue({
       uri: 'spotify:track:wrong',
       name: 'Completely Different Song',
-      artists: [{ name: 'Some Artist' }],
+      artists: [{ id: '5', name: 'Some Artist' }],
+      album: { id: 'alb3' },
     });
 
     const result = await matchFiles('token', ['/music/magnolia.mp3'], '/music');
@@ -289,11 +311,30 @@ describe('matchFiles', () => {
     });
 
     mockSearchTrack.mockResolvedValue(null);
-    mockSearchAlbum.mockResolvedValue({ id: 'album1' });
+    mockSearchAlbum.mockResolvedValue({
+      data: {
+        id: 'album1',
+        name: 'My Album',
+        release_date: '2023-01-01',
+        release_date_precision: 'day',
+        artists: [{ id: '6', name: 'Artist A' }],
+        genres: [],
+        label: '',
+        images: [],
+      },
+    });
     mockGetAlbum.mockResolvedValue({
+      id: 'album1',
+      name: 'My Album',
+      release_date: '2023-01-01',
+      release_date_precision: 'day',
+      artists: [{ id: '6', name: 'Artist A' }],
+      genres: [],
+      label: '',
+      images: [],
       tracks: {
         items: [
-          { uri: 'spotify:track:wrong', name: 'Intro', artists: [{ name: 'Wrong Artist' }] },
+          { uri: 'spotify:track:wrong', name: 'Intro', artists: [{ id: '7', name: 'Wrong Artist' }], album: { id: 'album1' } },
         ],
       },
     });

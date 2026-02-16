@@ -12,7 +12,7 @@ import {
   extractMetadata,
   validateArtistMatch,
   stringSimilarity,
-} from './spotify.js';
+} from './spotify/index.ts';
 
 // CLI args
 const args = process.argv.slice(2);
@@ -170,7 +170,7 @@ export async function matchFiles(
 
     log(`\n📍 ${fileName}`);
 
-    if (!metadata.artist) {
+    if (!metadata || !metadata.artist) {
       log(`   ⚠️  No artist metadata — skipping`);
       unmatched.push({ fileName, reason: 'No artist metadata' });
       continue;
@@ -203,10 +203,10 @@ export async function matchFiles(
     // Fallback: search album, then find best track
     if (!trackUri && metadata.album && metadata.title) {
       log(`   Trying album search: ${metadata.artist} - ${metadata.album}`);
-      const albumResult = await searchSpotifyAlbum(accessToken, metadata.artist, metadata.album);
+      const albumSearchResult = await searchSpotifyAlbum(accessToken, metadata.artist, metadata.album);
 
-      if (albumResult) {
-        const fullAlbum = await getSpotifyAlbum(accessToken, albumResult.id);
+      if (albumSearchResult.data) {
+        const fullAlbum = await getSpotifyAlbum(accessToken, albumSearchResult.data.id);
 
         if (fullAlbum?.tracks?.items) {
           const titleLower = metadata.title.toLowerCase();
@@ -279,7 +279,7 @@ async function main() {
     accessToken = await getUserAccessToken(CLIENT_ID, REDIRECT_URI);
     console.log('✅ Authenticated\n');
   } catch (err) {
-    console.error('❌ Authentication failed:', (err as Error).message);
+    console.error('❌ Authentication failed:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
@@ -363,7 +363,7 @@ async function main() {
     await addTracksToPlaylist(accessToken, playlistId, uris);
     console.log(`✅ Successfully added ${toAdd.length} track(s) to playlist!`);
   } catch (err) {
-    console.error('❌ Error adding tracks:', (err as Error).message);
+    console.error('❌ Error adding tracks:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 }

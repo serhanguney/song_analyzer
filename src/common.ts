@@ -9,8 +9,8 @@ export const REQUIRED_FIELD_NAMES = [
   'artwork',
   'label',
   'genre'
-];
+] as const;
 
 // Supported audio file extensions
-export const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.flac', '.wav', '.aiff', '.aif'];
+export const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.flac', '.wav', '.aiff', '.aif'] as const;
 

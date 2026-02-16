@@ -1,14 +1,18 @@
-export interface FileMetadata {
-  title: string | null;
-  artist: string | null;
-  album: string | null;
-  genre: string | null;
-  label: string | null;
-  bpm: number | null;
-  artwork: boolean | null;
-  releaseDate: string | null;
-  fileName: string;
-}
+import type {
+  FileMetadata,
+  SpotifyArtistRef,
+  SpotifyImage,
+  SpotifyTrackData,
+  SpotifyAlbumData,
+} from '../spotify/types.ts';
+
+export type {
+  FileMetadata,
+  SpotifyArtistRef,
+  SpotifyImage,
+  SpotifyTrackData,
+  SpotifyAlbumData,
+};
 
 export interface ScannedFile {
   filePath: string;
@@ -66,33 +70,3 @@ export interface UpdatableMatch extends MatchedFile {
   updatableFields: UpdatableField[];
 }
 
-// Spotify API response shapes (partial, only what we use)
-
-export interface SpotifyArtistRef {
-  id: string;
-  name: string;
-}
-
-export interface SpotifyImage {
-  url: string;
-  width: number;
-  height: number;
-}
-
-export interface SpotifyTrackData {
-  uri: string;
-  name: string;
-  artists: SpotifyArtistRef[];
-  album: { id: string };
-}
-
-export interface SpotifyAlbumData {
-  name: string;
-  release_date: string;
-  release_date_precision: string;
-  artists: SpotifyArtistRef[];
-  genres: string[];
-  label: string;
-  images: SpotifyImage[];
-  tracks?: { items: SpotifyTrackData[] };
-}

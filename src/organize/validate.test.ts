@@ -39,9 +39,11 @@ describe('validateFile', () => {
     artist: 'Test Artist',
     album: 'Test Album',
     releaseDate: '2024-03-15',
-    artwork: 'https://example.com/art.jpg',
+    artwork: true,
     label: 'Test Label',
     genre: 'Electronic',
+    bpm: null,
+    fileName: 'test.mp3',
   };
 
   it('returns valid for complete metadata', () => {

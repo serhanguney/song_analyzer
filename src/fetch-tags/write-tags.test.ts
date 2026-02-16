@@ -44,6 +44,7 @@ describe('parseReleaseDate', () => {
 
 describe('buildTags', () => {
   const spotifyData: SpotifyAlbumData = {
+    id: 'album1',
     name: 'Test Album',
     release_date: '2023-05-15',
     release_date_precision: 'day',

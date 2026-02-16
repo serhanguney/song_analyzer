@@ -2,7 +2,7 @@ import {
   searchSpotifyTrack,
   searchSpotifyAlbum,
   getSpotifyAlbum,
-} from '../spotify.js';
+} from '../spotify/index.ts';
 import type {
   ScannedFile,
   MatchResults,
@@ -126,10 +126,10 @@ async function searchSpotify(
   // Fallback to album search
   if (!spotifyData && metadata.album && metadata.artist) {
     if (verbose) console.log(`   Searching (album): ${metadata.artist} - ${metadata.album}`);
-    const albumResult = await searchSpotifyAlbum(accessToken, metadata.artist, metadata.album);
+    const albumSearchResult = await searchSpotifyAlbum(accessToken, metadata.artist, metadata.album);
 
-    if (albumResult) {
-      spotifyData = await getSpotifyAlbum(accessToken, albumResult.id);
+    if (albumSearchResult.data) {
+      spotifyData = await getSpotifyAlbum(accessToken, albumSearchResult.data.id);
 
       if (spotifyData?.release_date && verbose) {
         console.log(`   ✅ Match found via album search`);

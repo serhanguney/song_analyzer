@@ -1,7 +1,8 @@
 import path from 'node:path';
-import { getAudioFiles, extractMetadata } from '../spotify.js';
-import { REQUIRED_FIELD_NAMES } from '../common.js';
+import { getAudioFiles, extractMetadata } from '../spotify/index.ts';
+import { REQUIRED_FIELD_NAMES } from '../common.ts';
 import { isValidReleaseDateFormat } from '../fetch-tags/scan.ts';
+import type { FileMetadata } from '../spotify/types.ts';
 import type { ReleaseDate, ValidatedFile, InvalidFile, ValidationResults } from './types.ts';
 
 export function parseOrganizeDate(dateString: string | null): ReleaseDate | null {
@@ -16,14 +17,27 @@ export function parseOrganizeDate(dateString: string | null): ReleaseDate | null
   };
 }
 
+function getFieldValue(metadata: FileMetadata, field: string): unknown {
+  const lookup: Record<string, unknown> = {
+    title: metadata.title,
+    artist: metadata.artist,
+    album: metadata.album,
+    releaseDate: metadata.releaseDate,
+    artwork: metadata.artwork,
+    label: metadata.label,
+    genre: metadata.genre,
+  };
+  return lookup[field];
+}
+
 export function validateFile(
-  metadata: Record<string, unknown>,
+  metadata: FileMetadata,
 ): { isValid: boolean; missingFields: string[]; releaseDate: ReleaseDate | null; reason: string | null } {
   const missingFields: string[] = [];
 
   for (const fieldName of REQUIRED_FIELD_NAMES) {
     if (fieldName === 'releaseDate') continue; // handled separately below
-    if (!metadata[fieldName]) {
+    if (!getFieldValue(metadata, fieldName)) {
       missingFields.push(fieldName);
     }
   }

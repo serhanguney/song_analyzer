@@ -1,6 +1,7 @@
 import path from 'node:path';
-import { getAudioFiles, extractMetadata } from '../spotify.js';
-import { REQUIRED_FIELD_NAMES } from '../common.js';
+import { getAudioFiles, extractMetadata } from '../spotify/index.ts';
+import { REQUIRED_FIELD_NAMES } from '../common.ts';
+import type { FileMetadata } from '../spotify/types.ts';
 import type { ScannedFile } from './types.ts';
 
 export function isValidReleaseDateFormat(dateString: string | null): boolean {
@@ -21,17 +22,32 @@ export function isValidReleaseDateFormat(dateString: string | null): boolean {
   return !isNaN(new Date(dateString).getTime());
 }
 
+function getFieldValue(metadata: FileMetadata, field: string): unknown {
+  const lookup: Record<string, unknown> = {
+    title: metadata.title,
+    artist: metadata.artist,
+    album: metadata.album,
+    releaseDate: metadata.releaseDate,
+    artwork: metadata.artwork,
+    label: metadata.label,
+    genre: metadata.genre,
+  };
+  return lookup[field];
+}
+
 export function getMissingRequiredFields(
-  metadata: Record<string, unknown>,
+  metadata: FileMetadata,
 ): string[] {
   const missing: string[] = [];
 
   for (const fieldName of REQUIRED_FIELD_NAMES) {
+    const value = getFieldValue(metadata, fieldName);
+
     if (fieldName === 'releaseDate') {
-      if (!metadata[fieldName] || !isValidReleaseDateFormat(metadata[fieldName] as string)) {
+      if (!value || typeof value !== 'string' || !isValidReleaseDateFormat(value)) {
         missing.push(fieldName);
       }
-    } else if (!metadata[fieldName]) {
+    } else if (!value) {
       missing.push(fieldName);
     }
   }
@@ -45,6 +61,21 @@ export async function scanDirectory(directory: string): Promise<ScannedFile[]> {
 
   for (const filePath of audioFiles) {
     const metadata = await extractMetadata(filePath);
+
+    if (!metadata) {
+      results.push({
+        filePath,
+        relativePath: path.relative(directory, filePath),
+        metadata: {
+          title: null, artist: null, album: null, genre: null,
+          label: null, bpm: null, artwork: null, releaseDate: null,
+          fileName: path.basename(filePath),
+        },
+        missingFields: [...REQUIRED_FIELD_NAMES],
+      });
+      continue;
+    }
+
     const missingFields = getMissingRequiredFields(metadata);
 
     results.push({

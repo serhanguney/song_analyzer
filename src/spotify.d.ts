@@ -1,0 +1,21 @@
+export function getClientCredentialsToken(clientId: string, clientSecret: string): Promise<string>;
+export function cleanSearchString(str: string): string;
+export function getPrimaryArtist(artistString: string): string;
+export function validateArtistMatch(searchArtist: string, spotifyArtists: Array<{ name: string }>): boolean;
+export function stringSimilarity(str1: string, str2: string): number;
+export function searchSpotifyTrack(accessToken: string, artist: string, track: string): Promise<any>;
+export function searchSpotifyAlbum(accessToken: string, artist: string, album: string): Promise<any>;
+export function getSpotifyAlbum(accessToken: string, albumId: string): Promise<any>;
+export function getSpotifyArtist(accessToken: string, artistId: string): Promise<any>;
+export function getAudioFiles(directory: string): Promise<string[]>;
+export function extractMetadata(filePath: string): Promise<{
+  title: string | null;
+  artist: string | null;
+  album: string | null;
+  genre: string | null;
+  label: string | null;
+  bpm: number | null;
+  artwork: boolean | null;
+  releaseDate: string | null;
+  fileName: string;
+}>;

@@ -10,6 +10,8 @@ import {
   getSpotifyAlbum,
   getAudioFiles,
   extractMetadata,
+  validateArtistMatch,
+  stringSimilarity,
 } from './spotify.js';
 
 // CLI args
@@ -184,10 +186,17 @@ export async function matchFiles(
       const trackResult = await searchSpotifyTrack(accessToken, metadata.artist, metadata.title);
 
       if (trackResult) {
-        trackUri = trackResult.uri;
-        trackName = trackResult.name;
-        trackArtist = trackResult.artists.map((a: { name: string }) => a.name).join(', ');
-        log(`   ✅ Matched: ${trackArtist} - ${trackName}`);
+        const artistMatch = validateArtistMatch(metadata.artist, trackResult.artists);
+        const titleSim = stringSimilarity(metadata.title, trackResult.name);
+
+        if (artistMatch && titleSim >= 0.3) {
+          trackUri = trackResult.uri;
+          trackName = trackResult.name;
+          trackArtist = trackResult.artists.map((a: { name: string }) => a.name).join(', ');
+          log(`   ✅ Matched: ${trackArtist} - ${trackName} (${(titleSim * 100).toFixed(0)}% title match)`);
+        } else {
+          log(`   ⚠️  Rejected: ${trackResult.artists[0]?.name} - ${trackResult.name} (artist: ${artistMatch ? 'ok' : 'mismatch'}, title: ${(titleSim * 100).toFixed(0)}%)`);
+        }
       }
     }
 
@@ -200,10 +209,13 @@ export async function matchFiles(
         const fullAlbum = await getSpotifyAlbum(accessToken, albumResult.id);
 
         if (fullAlbum?.tracks?.items) {
-          // Find matching track in album
           const titleLower = metadata.title.toLowerCase();
           const matchingTrack = fullAlbum.tracks.items.find(
-            (t: { name: string }) => t.name.toLowerCase().includes(titleLower) || titleLower.includes(t.name.toLowerCase()),
+            (t: { name: string; artists: Array<{ name: string }> }) => {
+              const titleSim = stringSimilarity(metadata.title!, t.name);
+              const artistMatch = validateArtistMatch(metadata.artist!, t.artists);
+              return artistMatch && titleSim >= 0.3;
+            },
           );
 
           if (matchingTrack) {

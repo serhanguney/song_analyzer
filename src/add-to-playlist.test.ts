@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { addTracksToPlaylist, matchFiles, getPlaylistTracks, filterDuplicates } from './add-to-playlist.ts';
 
-// Mock spotify.js
-vi.mock('./spotify.js', () => ({
-  searchSpotifyTrack: vi.fn(),
-  searchSpotifyAlbum: vi.fn(),
-  getSpotifyAlbum: vi.fn(),
-  getAudioFiles: vi.fn(),
-  extractMetadata: vi.fn(),
-}));
+// Mock spotify.js — use real implementations for validation functions
+import { validateArtistMatch as realValidateArtistMatch, stringSimilarity as realStringSimilarity } from './spotify.js';
+vi.mock('./spotify.js', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('./spotify.js')>();
+  return {
+    searchSpotifyTrack: vi.fn(),
+    searchSpotifyAlbum: vi.fn(),
+    getSpotifyAlbum: vi.fn(),
+    getAudioFiles: vi.fn(),
+    extractMetadata: vi.fn(),
+    validateArtistMatch: orig.validateArtistMatch,
+    stringSimilarity: orig.stringSimilarity,
+  };
+});
 
 // Mock spotify-auth.ts
 vi.mock('./spotify-auth.ts', () => ({
@@ -234,6 +240,68 @@ describe('matchFiles', () => {
     expect(result.matched[0].fileName).toBe('a.mp3');
     expect(result.unmatched).toHaveLength(2);
     expect(result.unmatched.map(u => u.fileName)).toEqual(['b.mp3', 'c.mp3']);
+  });
+
+  it('rejects track result when artist does not match', async () => {
+    mockExtractMetadata.mockResolvedValue({
+      title: 'daydream', artist: 'Jørd', album: null,
+      genre: null, label: null, bpm: null, artwork: null, releaseDate: null,
+      fileName: 'daydream.mp3',
+    });
+
+    mockSearchTrack.mockResolvedValue({
+      uri: 'spotify:track:wrong',
+      name: 'Daydreams',
+      artists: [{ name: 'Jordan Plant' }, { name: 'Mac White' }],
+    });
+
+    const result = await matchFiles('token', ['/music/daydream.mp3'], '/music');
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched).toHaveLength(1);
+    expect(result.unmatched[0].reason).toBe('No Spotify match found');
+  });
+
+  it('rejects track result when title similarity is too low', async () => {
+    mockExtractMetadata.mockResolvedValue({
+      title: 'Magnolia', artist: 'Some Artist', album: null,
+      genre: null, label: null, bpm: null, artwork: null, releaseDate: null,
+      fileName: 'magnolia.mp3',
+    });
+
+    mockSearchTrack.mockResolvedValue({
+      uri: 'spotify:track:wrong',
+      name: 'Completely Different Song',
+      artists: [{ name: 'Some Artist' }],
+    });
+
+    const result = await matchFiles('token', ['/music/magnolia.mp3'], '/music');
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched).toHaveLength(1);
+  });
+
+  it('rejects album fallback track when artist does not match', async () => {
+    mockExtractMetadata.mockResolvedValue({
+      title: 'Intro', artist: 'Artist A', album: 'My Album',
+      genre: null, label: null, bpm: null, artwork: null, releaseDate: null,
+      fileName: 'intro.mp3',
+    });
+
+    mockSearchTrack.mockResolvedValue(null);
+    mockSearchAlbum.mockResolvedValue({ id: 'album1' });
+    mockGetAlbum.mockResolvedValue({
+      tracks: {
+        items: [
+          { uri: 'spotify:track:wrong', name: 'Intro', artists: [{ name: 'Wrong Artist' }] },
+        ],
+      },
+    });
+
+    const result = await matchFiles('token', ['/music/intro.mp3'], '/music');
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched).toHaveLength(1);
   });
 });
 

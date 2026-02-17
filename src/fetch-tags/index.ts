@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import readlineSync from 'readline-sync';
+import { confirm } from '../ui/prompts.ts';
 import { getClientCredentialsToken } from '../spotify/index.ts';
 import { scanDirectory } from './scan.ts';
 import { matchToSpotify } from './match.ts';
@@ -87,8 +87,8 @@ async function main() {
   }
 
   // Confirm
-  const answer = readlineSync.question('Do you want to proceed with the update? (Yes/No): ');
-  if (answer.toLowerCase() !== 'yes' && answer.toLowerCase() !== 'y') {
+  const proceed = await confirm('Do you want to proceed with the update?');
+  if (!proceed) {
     console.log('\n❌ Update cancelled. Exiting.');
     process.exit(0);
   }

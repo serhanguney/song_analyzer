@@ -68,3 +68,32 @@ Reuses from existing shared modules:
 - `validateFile` — all fields present, missing fields, invalid releaseDate, missing releaseDate
 - `parseOrganizeDate` — valid YYYY-MM-DD → `{ year, month }`, invalid formats → null
 - `resolveFilenameConflict` — no conflict returns same path, existing file appends suffix
+
+## Intended workflow
+
+The script uses separate source and target directories to support a "drop folder" workflow:
+
+```
+SOURCE_DIRECTORY/       ← Drop new files here
+    └── (any structure)
+
+TARGET_DIRECTORY/       ← Organized files end up here
+    ├── [invalid]/
+    ├── 2022/
+    │   ├── 01/
+    │   └── 02/
+    └── 2023/
+        └── 06/
+```
+
+**Typical cycle:**
+1. Add new tracks to `SOURCE_DIRECTORY`
+2. Run `npm run organize`
+3. Valid files move to `TARGET_DIRECTORY/YEAR/MONTH/`
+4. Invalid files move to `SOURCE_DIRECTORY/[invalid]/`
+5. Empty directories in source are cleaned up
+
+**Fixing invalid files:**
+1. Fix metadata in `[invalid]/` using a metadata editor
+2. Move fixed files back to `SOURCE_DIRECTORY`
+3. Run `npm run organize` again

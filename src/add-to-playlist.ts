@@ -2,7 +2,7 @@ import 'dotenv/config';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import readlineSync from 'readline-sync';
+import { confirm } from './ui/prompts.ts';
 import { getUserAccessToken } from './spotify-auth.ts';
 import {
   searchSpotifyTrack,
@@ -346,11 +346,8 @@ async function main() {
   }
 
   // Confirm
-  const answer = readlineSync.question(
-    `Add ${toAdd.length} track(s) to playlist ${playlistId}? (Yes/No): `,
-  );
-
-  if (answer.toLowerCase() !== 'yes' && answer.toLowerCase() !== 'y') {
+  const proceed = await confirm(`Add ${toAdd.length} track(s) to playlist ${playlistId}?`);
+  if (!proceed) {
     console.log('\n❌ Cancelled.');
     process.exit(0);
   }

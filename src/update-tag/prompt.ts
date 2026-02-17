@@ -1,8 +1,8 @@
 import path from 'node:path';
-import readlineSync from 'readline-sync';
 import { REQUIRED_FIELD_NAMES } from '../common.ts';
 import { isValidReleaseDateFormat } from '../fetch-tags/scan.ts';
 import { downloadArtwork } from './metadata.ts';
+import { confirm, textInput, select } from '../ui/prompts.ts';
 import type { FileMetadata } from './types.ts';
 
 const GREEN = '\x1b[32m';
@@ -11,84 +11,58 @@ const CYAN = '\x1b[36m';
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
 
-export function selectFile(files: string[], baseDir: string): string | null {
+export async function selectFile(files: string[], baseDir: string): Promise<string | null> {
   console.log(`${BOLD}Found ${files.length} audio file(s):${RESET}\n`);
 
-  for (let i = 0; i < files.length; i++) {
-    const relativePath = path.relative(baseDir, files[i]);
-    console.log(`${i + 1}. ${relativePath}`);
-  }
+  const options = files.map(file => ({
+    label: path.relative(baseDir, file),
+    value: file,
+  }));
 
-  console.log('');
-
-  const fileIndex = readlineSync.questionInt(
-    `${CYAN}Select a file number (1-${files.length}): ${RESET}`,
-  ) - 1;
-
-  if (fileIndex < 0 || fileIndex >= files.length) {
-    console.log(`${YELLOW}Invalid selection${RESET}`);
-    return null;
-  }
-
-  return files[fileIndex];
+  const selected = await select('Select a file:', options);
+  return selected;
 }
 
-export function promptFields(currentMetadata: FileMetadata): FileMetadata {
+export async function promptFields(currentMetadata: FileMetadata): Promise<FileMetadata> {
   const updated = { ...currentMetadata };
 
   console.log(`${BOLD}Enter new values (press Enter to skip and keep current value):${RESET}\n`);
 
   // Title
-  const newTitle = readlineSync.question(
-    `${CYAN}Title${RESET} [${currentMetadata.title || 'empty'}]: `,
-  );
+  const newTitle = await textInput(`Title [${currentMetadata.title || 'empty'}]`);
   if (newTitle.trim()) updated.title = newTitle.trim();
 
   // Artist
-  const newArtist = readlineSync.question(
-    `${CYAN}Artist${RESET} [${currentMetadata.artist || 'empty'}]: `,
-  );
+  const newArtist = await textInput(`Artist [${currentMetadata.artist || 'empty'}]`);
   if (newArtist.trim()) updated.artist = newArtist.trim();
 
   // Album
-  const newAlbum = readlineSync.question(
-    `${CYAN}Album${RESET} [${currentMetadata.album || 'empty'}]: `,
-  );
+  const newAlbum = await textInput(`Album [${currentMetadata.album || 'empty'}]`);
   if (newAlbum.trim()) updated.album = newAlbum.trim();
 
-  // Release Date (with validation loop)
-  let releaseDateValid = false;
-  while (!releaseDateValid) {
-    const newReleaseDate = readlineSync.question(
-      `${CYAN}Release Date${RESET} [${currentMetadata.releaseDate || 'empty'}] (YYYY-MM-DD format required): `,
-    );
-
-    if (!newReleaseDate.trim()) {
-      releaseDateValid = true;
-      break;
-    }
-
-    const normalizedDate = newReleaseDate.trim().replace(/\//g, '-');
-
-    if (isValidReleaseDateFormat(normalizedDate)) {
-      updated.releaseDate = normalizedDate;
-      releaseDateValid = true;
-    } else {
-      console.log(`${YELLOW}⚠️  Invalid format. Please enter date as YYYY-MM-DD (e.g., 2024-12-25)${RESET}`);
-      console.log(`${YELLOW}   Or press Enter to skip and keep current value${RESET}`);
-    }
+  // Release Date (with validation)
+  const newReleaseDate = await textInput(
+    `Release Date [${currentMetadata.releaseDate || 'empty'}] (YYYY-MM-DD)`,
+    {
+      validate(value) {
+        if (!value || !value.trim()) return;
+        const normalized = value.trim().replace(/\//g, '-');
+        if (!isValidReleaseDateFormat(normalized)) {
+          return 'Invalid format. Please enter date as YYYY-MM-DD (e.g., 2024-12-25)';
+        }
+      },
+    },
+  );
+  if (newReleaseDate.trim()) {
+    updated.releaseDate = newReleaseDate.trim().replace(/\//g, '-');
   }
 
   // Label
-  const newLabel = readlineSync.question(
-    `${CYAN}Label${RESET} [${currentMetadata.label || 'empty'}]: `,
-  );
+  const newLabel = await textInput(`Label [${currentMetadata.label || 'empty'}]`);
   if (newLabel.trim()) updated.label = newLabel.trim();
 
   // Genre
-  const newGenre = readlineSync.question(
-    `${CYAN}Genre${RESET} [${currentMetadata.genre || 'empty'}]: `,
-  );
+  const newGenre = await textInput(`Genre [${currentMetadata.genre || 'empty'}]`);
   if (newGenre.trim()) updated.genre = newGenre.trim();
 
   return updated;
@@ -98,8 +72,8 @@ export async function promptArtwork(metadata: FileMetadata): Promise<FileMetadat
   const updated = { ...metadata };
 
   console.log('');
-  const artworkUrl = readlineSync.question(
-    `${CYAN}Artwork URL${RESET} [${metadata.artwork}] (enter URL or press Enter to skip): `,
+  const artworkUrl = await textInput(
+    `Artwork URL [${metadata.artwork}] (enter URL or press Enter to skip)`,
   );
 
   if (artworkUrl.trim()) {
@@ -158,7 +132,7 @@ export function displayChangeSummary(
   return hasChanges;
 }
 
-export function confirmApply(): boolean {
+export async function confirmApply(): Promise<boolean> {
   console.log('');
-  return readlineSync.keyInYNStrict(`${CYAN}Apply these changes?${RESET}`);
+  return confirm('Apply these changes?');
 }

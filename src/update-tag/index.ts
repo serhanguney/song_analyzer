@@ -36,7 +36,7 @@ async function main() {
     return;
   }
 
-  const selectedFile = selectFile(audioFiles, preparationDir);
+  const selectedFile = await selectFile(audioFiles, preparationDir);
   if (!selectedFile) return;
 
   const fileName = path.basename(selectedFile);
@@ -60,7 +60,7 @@ async function main() {
   console.log('');
 
   // Prompt for new values
-  let updatedMetadata = promptFields(currentMetadata);
+  let updatedMetadata = await promptFields(currentMetadata);
   updatedMetadata = await promptArtwork(updatedMetadata);
 
   console.log('');
@@ -73,7 +73,7 @@ async function main() {
     return;
   }
 
-  if (!confirmApply()) {
+  if (!(await confirmApply())) {
     console.log(`${YELLOW}Update cancelled.${RESET}`);
     return;
   }

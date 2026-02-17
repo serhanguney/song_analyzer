@@ -7,7 +7,7 @@
   "scripts": {
     "fetch-tags": "tsx src/fetch-tags/index.ts",
     "organize": "tsx src/organize/index.ts",
-    "find-references": "node src/find-references.js",
+    "find-references": "tsx src/find-references.js",
     "update-tag": "tsx src/update-tag/index.ts",
     "auth": "tsx src/spotify-auth.ts",
     "add-to-playlist": "tsx src/add-to-playlist.ts",
@@ -22,17 +22,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clack/prompts": "^1.0.1",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "music-metadata": "^11.10.3",
     "node-id3": "^0.2.9",
     "open": "^11.0.0",
-    "readline-sync": "^1.4.10",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
-    "@types/readline-sync": "^1.4.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

@@ -72,3 +72,21 @@ Existing shared modules stay where they are:
 - `getMissingRequiredFields` — all present, some missing, invalid releaseDate
 - `buildTags` — maps Spotify data to correct ID3 fields, skips fields not in missingFields
 - `filterUpdatableMatches` — separates matches with/without updatable data
+
+## Design decisions
+
+### Formatted date stored in Album Artist (TPE2), not Album
+
+The formatted release date (YYYY/MM) is written to `performerInfo` (node-id3's name for the TPE2/Album Artist frame) instead of the `album` field. This prevents a feedback loop where:
+
+1. First run writes `album = "2021/05"` (overwriting the real album name)
+2. Second run searches Spotify with `album: "2021/05"` → wrong match
+3. Wrong match's release date (e.g. 1987) propagates back
+
+By using `performerInfo`/TPE2, the original album name is preserved for accurate Spotify searches on subsequent runs.
+
+### Validation thresholds
+
+- **Artist match**: Required — exact match or substring match (bidirectional, case-insensitive)
+- **Album similarity**: 30% minimum for first 3 search strategies, 20% for last-resort general search
+- **Suspicious match**: Release year < 1990 is flagged for user review (house/electronic music is typically post-1990)

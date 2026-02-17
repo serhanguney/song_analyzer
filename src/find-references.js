@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import fs from 'fs/promises';
 import path from 'path';
-import readlineSync from 'readline-sync';
 import { AUDIO_EXTENSIONS } from './common.js';
+import { textInput } from './ui/prompts.ts';
 
 // Check for verbose flag
 const VERBOSE = process.argv.includes('-v') || process.argv.includes('--verbose');
@@ -59,25 +59,21 @@ function getBaseName(filePath) {
  */
 async function promptForDirectory(promptMessage) {
   while (true) {
-    const dirPath = readlineSync.question(promptMessage);
-    
-    // Allow user to exit
-    if (dirPath.toLowerCase() === 'exit' || dirPath.toLowerCase() === 'quit') {
-      console.log('\n❌ Cancelled by user. Exiting.');
-      process.exit(0);
+    const dirPath = await textInput(promptMessage);
+
+    if (!dirPath.trim()) {
+      console.error('❌ Please enter a directory path.\n');
+      continue;
     }
-    
-    // Validate directory exists
+
     try {
-      const stats = await fs.stat(dirPath);
+      const stats = await fs.stat(dirPath.trim());
       if (!stats.isDirectory()) {
         console.error(`❌ Error: "${dirPath}" is not a directory. Please try again.\n`);
         continue;
       }
-      
-      // Directory exists and is valid
-      return dirPath;
-    } catch (error) {
+      return dirPath.trim();
+    } catch {
       console.error(`❌ Error: Directory "${dirPath}" not found. Please try again.\n`);
     }
   }
@@ -95,7 +91,7 @@ async function findReferences() {
   } else {
     console.log('🔍 Running in verbose mode\n');
   }
-  console.log('💡 Tip: Type "exit" or "quit" at any prompt to cancel.\n');
+  console.log('💡 Tip: Press Ctrl+C at any prompt to cancel.\n');
   
   // Prompt for SOURCE_DIRECTORY
   const SOURCE_DIRECTORY = await promptForDirectory(

@@ -56,6 +56,28 @@ src/spotify/
 | `src/update-tag/index.ts` | `getAudioFiles` |
 | `src/organize/validate.ts` | `getAudioFiles`, `extractMetadata` |
 
+## Spotify API reference
+
+- [Authorization (Client Credentials)](https://developer.spotify.com/documentation/web-api/concepts/authorization)
+- [Search API](https://developer.spotify.com/documentation/web-api/reference/search) — used for track and album searches
+- [Get Album](https://developer.spotify.com/documentation/web-api/reference/get-an-album) — retrieves full album metadata
+- [Get Artist](https://developer.spotify.com/documentation/web-api/reference/get-an-artist) — retrieves artist genres
+
+## Known Spotify data gaps
+
+Not all tracks/albums have complete metadata in Spotify's API:
+
+- **Label** — Most common gap. Independent, self-released, older catalog, and regional releases often lack it.
+- **Genre** — Some albums have no genre classification, or genres are too broad for electronic music subgenres. The script falls back to artist-level genres when album genres are empty.
+- **Artwork** — Rarely missing, but possible.
+
+When Spotify can't fill a field, the file stays in `[invalid]` until manually completed. Useful alternative sources:
+- [Discogs](https://www.discogs.com)
+- [Beatport](https://www.beatport.com)
+- [MusicBrainz](https://musicbrainz.org)
+
+Recommended metadata editors: Yate (macOS), Mp3tag (Windows/macOS), Kid3 (cross-platform).
+
 ## Tests
 
 - `matching.ts` — All 4 functions are pure. Test edge cases for `cleanSearchString`, `getPrimaryArtist`, `validateArtistMatch`, `stringSimilarity`.

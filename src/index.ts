@@ -9,6 +9,7 @@ const scripts = [
   { label: 'Add to playlist      Match local files to Spotify and add to a playlist', value: 'add-to-playlist' },
   { label: 'Find in playlist     Search for a file in PLAYLIST_DIRECTORY', value: 'find-in-playlist' },
   { label: 'Delete from playlist Delete files listed in to_delete.txt from PLAYLIST_DIRECTORY', value: 'delete-from-playlist' },
+  { label: 'Copy hotlist         Copy hotlist.txt tracks from PLAYLIST_DIRECTORY to REFERENCE_DIRECTORY', value: 'copy-hotlist' },
   { label: 'Auth                 Authorize your Spotify account', value: 'auth' },
 ];
 

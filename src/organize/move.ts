@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ReleaseDate, MoveResult } from './types.ts';
+import type { MoveResult } from './types.ts';
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -47,24 +47,14 @@ export async function moveToInvalidDir(
   return { success: true };
 }
 
-export async function moveByReleaseDate(
+export async function moveToTarget(
   filePath: string,
-  releaseDate: ReleaseDate,
   targetDir: string,
 ): Promise<MoveResult> {
-  const monthFolder = path.join(targetDir, releaseDate.year, releaseDate.month);
-  const targetPath = path.join(monthFolder, path.basename(filePath));
+  const targetPath = await resolveConflict(path.join(targetDir, path.basename(filePath)));
 
-  // Already in correct location?
   if (filePath === targetPath) {
     return { success: true, skipped: true };
-  }
-
-  await fs.mkdir(monthFolder, { recursive: true });
-
-  // Don't overwrite existing files
-  if (await fileExists(targetPath)) {
-    return { success: false, reason: 'File already exists at destination' };
   }
 
   await fs.rename(filePath, targetPath);

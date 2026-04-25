@@ -24,7 +24,7 @@ function parseTitlesFromUtf16Tsv(filePath: string): string[] {
   return dataLines.map(line => {
     const cols = line.split('\t');
     // Column layout: # \t Track Title \t Key \t ...
-    return cols[1]?.trim() ?? '';
+    return cols[1]?.replace(/\s+/g, ' ').trim() ?? '';
   }).filter(Boolean);
 }
 
@@ -50,9 +50,13 @@ function collectAudioFiles(dir: string): string[] {
   return results;
 }
 
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 function findMatchingFile(title: string, audioFiles: string[]): string | undefined {
-  const needle = title.toLowerCase();
-  return audioFiles.find(f => path.basename(f, path.extname(f)).toLowerCase().includes(needle));
+  const needle = normalize(title);
+  return audioFiles.find(f => normalize(path.basename(f, path.extname(f))).includes(needle));
 }
 
 async function main() {

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanAndValidate } from './validate.ts';
-import { moveToInvalidDir, moveByReleaseDate } from './move.ts';
+import { moveToInvalidDir, moveToTarget } from './move.ts';
 import { cleanupEmptyDirectories } from './cleanup.ts';
 
 function getErrorMessage(err: unknown): string {
@@ -111,17 +111,16 @@ async function main() {
 
   for (const file of valid) {
     console.log(`📍 ${file.relativePath}`);
-    console.log(`   Release Date: ${file.releaseDate.formatted} (${file.releaseDate.fullDate})`);
 
     try {
-      const result = await moveByReleaseDate(file.filePath, file.releaseDate, TARGET_DIRECTORY);
+      const result = await moveToTarget(file.filePath, TARGET_DIRECTORY);
 
       if (result.success) {
         if (result.skipped) {
           console.log(`   ⏭️  Already in correct location`);
           skippedCount++;
         } else {
-          console.log(`   ✅ Moved to ${file.releaseDate.year}/${file.releaseDate.month}/`);
+          console.log(`   ✅ Moved`);
           movedCount++;
         }
       } else {

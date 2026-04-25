@@ -3,19 +3,7 @@ import { getAudioFiles, extractMetadata } from '../spotify/index.ts';
 import { REQUIRED_FIELD_NAMES } from '../common.ts';
 import { isValidReleaseDateFormat } from '../fetch-tags/scan.ts';
 import type { FileMetadata } from '../spotify/types.ts';
-import type { ReleaseDate, ValidatedFile, InvalidFile, ValidationResults } from './types.ts';
-
-export function parseOrganizeDate(dateString: string | null): ReleaseDate | null {
-  if (!dateString || !isValidReleaseDateFormat(dateString)) return null;
-
-  const [year, month] = dateString.split('-');
-  return {
-    year,
-    month,
-    fullDate: dateString,
-    formatted: `${year}/${month}`,
-  };
-}
+import type { ValidatedFile, InvalidFile, ValidationResults } from './types.ts';
 
 function getFieldValue(metadata: FileMetadata, field: string): unknown {
   const lookup: Record<string, unknown> = {
@@ -32,31 +20,30 @@ function getFieldValue(metadata: FileMetadata, field: string): unknown {
 
 export function validateFile(
   metadata: FileMetadata,
-): { isValid: boolean; missingFields: string[]; releaseDate: ReleaseDate | null; reason: string | null } {
+): { isValid: boolean; missingFields: string[]; reason: string | null } {
   const missingFields: string[] = [];
 
   for (const fieldName of REQUIRED_FIELD_NAMES) {
-    if (fieldName === 'releaseDate') continue; // handled separately below
+    if (fieldName === 'releaseDate') {
+      const rawDate = metadata.releaseDate;
+      if (!rawDate || typeof rawDate !== 'string' || !isValidReleaseDateFormat(rawDate)) {
+        missingFields.push('releaseDate');
+      }
+      continue;
+    }
     if (!getFieldValue(metadata, fieldName)) {
       missingFields.push(fieldName);
     }
   }
 
-  const rawDate = metadata.releaseDate;
-  const releaseDate = parseOrganizeDate(typeof rawDate === 'string' ? rawDate : null);
-
-  if (!releaseDate) {
-    missingFields.push('releaseDate');
-  }
-
   if (missingFields.length === 0) {
-    return { isValid: true, missingFields: [], releaseDate, reason: null };
+    return { isValid: true, missingFields: [], reason: null };
   }
 
-  // Build reason string
   const reasons: string[] = [];
 
-  if (!releaseDate) {
+  if (missingFields.includes('releaseDate')) {
+    const rawDate = metadata.releaseDate;
     if (rawDate && typeof rawDate === 'string') {
       reasons.push(`Invalid release date format: "${rawDate}" (must be YYYY-MM-DD)`);
     } else {
@@ -69,12 +56,7 @@ export function validateFile(
     reasons.push(`Missing fields: ${otherMissing.join(', ')}`);
   }
 
-  return {
-    isValid: false,
-    missingFields,
-    releaseDate,
-    reason: reasons.join(', '),
-  };
+  return { isValid: false, missingFields, reason: reasons.join(', ') };
 }
 
 export async function scanAndValidate(directory: string): Promise<ValidationResults> {
@@ -93,8 +75,8 @@ export async function scanAndValidate(directory: string): Promise<ValidationResu
 
     const result = validateFile(metadata);
 
-    if (result.isValid && result.releaseDate) {
-      valid.push({ filePath, relativePath, metadata, releaseDate: result.releaseDate });
+    if (result.isValid) {
+      valid.push({ filePath, relativePath, metadata });
     } else {
       invalid.push({ filePath, relativePath, reason: result.reason ?? 'Unknown validation error', metadata });
     }

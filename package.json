@@ -13,6 +13,7 @@
     "auth": "tsx src/spotify-auth.ts",
     "add-to-playlist": "tsx src/add-to-playlist.ts",
     "find-in-playlist": "tsx src/find-in-playlist.ts",
+    "delete-from-playlist": "tsx src/delete-from-playlist.ts",
     "test": "vitest run"
   },
   "keywords": [

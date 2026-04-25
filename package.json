@@ -12,6 +12,7 @@
     "update-tag": "tsx src/update-tag/index.ts",
     "auth": "tsx src/spotify-auth.ts",
     "add-to-playlist": "tsx src/add-to-playlist.ts",
+    "find-in-playlist": "tsx src/find-in-playlist.ts",
     "test": "vitest run"
   },
   "keywords": [

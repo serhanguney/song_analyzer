@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { REQUIRED_FIELD_NAMES } from '../common.ts';
-import { isValidReleaseDateFormat } from '../fetch-tags/scan.ts';
+import { isValidReleaseDateFormat } from './write-tags.ts';
 import { downloadArtwork } from './metadata.ts';
 import { confirm, textInput, select } from '../ui/prompts.ts';
 import type { FileMetadata } from './types.ts';

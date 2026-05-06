@@ -1,7 +1,7 @@
 import { parseFile } from 'music-metadata';
 import path from 'node:path';
 import axios from 'axios';
-import { writeTags, isWritableFormat } from '../fetch-tags/write-tags.ts';
+import { writeTags, isWritableFormat } from './write-tags.ts';
 import type { FileMetadata, ArtworkData } from './types.ts';
 
 export async function readMetadata(filePath: string): Promise<FileMetadata | null> {

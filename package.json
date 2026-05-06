@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
-    "fetch-tags": "tsx src/fetch-tags/index.ts",
-    "organize": "tsx src/organize/index.ts",
+    "update-genre": "tsx src/update-genre.ts",
     "find-references": "tsx src/find-references.js",
     "update-tag": "tsx src/update-tag/index.ts",
     "auth": "tsx src/spotify-auth.ts",

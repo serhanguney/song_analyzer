@@ -7,8 +7,8 @@ import { parseFile } from 'music-metadata';
 import { AUDIO_EXTENSIONS } from './common.ts';
 import { writeTags, isWritableFormat } from './update-tag/write-tags.ts';
 
-type Filename = 'to_house' | 'to_tech_house' | 'to_indie_dance' | "to_minimal_tech";
-type Genre = 'House' | 'Tech House' | 'Indie Dance' | 'Minimal / Deep Tech';
+type Filename = 'to_house' | 'to_tech_house' | 'to_indie_dance' | "to_minimal_tech" | "to_deep_house";
+type Genre = 'House' | 'Tech House' | 'Indie Dance' | 'Minimal / Deep Tech' | 'Deep House';
 
 const ARCHIVE_DIR =
   '/Users/serhanguney/Library/Mobile Documents/com~apple~CloudDocs/Musical/[archive]';
@@ -17,7 +17,8 @@ const FILENAME_GENRE_MAP: Record<Filename, Genre> = {
   to_house: 'House',
   to_tech_house: 'Tech House',
   to_indie_dance: 'Indie Dance',
-  to_minimal_tech: 'Minimal / Deep Tech'
+  to_minimal_tech: 'Minimal / Deep Tech',
+  to_deep_house: 'Deep House'
 };
 
 function parseTitlesFromUtf16Tsv(filePath: string): string[] {
